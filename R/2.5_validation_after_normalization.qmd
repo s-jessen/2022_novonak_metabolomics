@@ -1,0 +1,38 @@
+---
+title: "1_data_preparation"
+format: html
+editor: source
+---
+
+Load in libraries and data
+```{r, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+source("R/functions.R")
+source("R/libraries.R")
+
+load(here::here('data/metadata.rda'))
+load(here::here('data/df_long_ratios.rda'))
+load(here::here('data/df_long_ratios_summary.rda'))
+load(here::here('data/se_ratios.rda'))
+```
+
+```{r}
+boxplot(SummarizedExperiment::assay(se_ratios))
+```
+
+```{r}
+color = metadata[metadata$site=="a",]$time
+
+plot1 <- plotQC(SummarizedExperiment::assay(se_ratios), 
+                labels=colnames(SummarizedExperiment::assay(se_ratios)), 
+                panel = "dendrogram", grps = color)+
+                ggplot2::ggtitle("dendrogram")
+
+plot2 <- plotQC(SummarizedExperiment::assay(se_ratios),
+                labels=colnames(SummarizedExperiment::assay(se_ratios)), 
+                panel = "pca", grps = color)+
+                ggplot2::ggtitle("pca")
+
+ggpubr::ggarrange(plot1, plot2, nrow = 1, ncol = 2)
+
+```

@@ -1,0 +1,39 @@
+---
+title: "1_data_preparation"
+format: html
+editor: source
+---
+
+Load in libraries and data
+```{r, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+source("R/functions.R")
+source("R/libraries.R")
+
+load(here::here('data/metadata.rda'))
+load(here::here('data/df_long_ratios.rda'))
+load(here::here('data/df_long_ratios_summary.rda'))
+load(here::here('data/se_ratios.rda'))
+```
+
+*One sample t-tests*
+One-sample t-test on exercise data to determine metabolites with a significantly different net protein flux from zero
+```{r}
+one_sample_t_tests(df_long_ratios)
+
+results_one_sample_pre <- readxl::read_excel(here::here('data/results/results_one_sample_pre.xlsx'))
+results_one_sample_baseline <- readxl::read_excel(here::here('data/results/results_one_sample_baseline.xlsx'))
+results_one_sample_exercise <- readxl::read_excel(here::here('data/results/results_one_sample_exercise.xlsx'))
+results_one_sample_rec60 <- readxl::read_excel(here::here('data/results/results_one_sample_rec60.xlsx'))
+results_one_sample_rec180 <- readxl::read_excel(here::here('data/results/results_one_sample_rec180.xlsx'))
+```
+
+
+```{r}
+volcano_all(xiao, 0.05)
+
+ggsave(here::here('data/figures/volcano_all.png'), width = 15, height = 10)
+```
+
+
+

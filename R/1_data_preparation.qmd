@@ -1,0 +1,53 @@
+---
+title: "1_data_preparation"
+format: html
+editor: source
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+source(here::here("R/functions.R"))
+source(here::here("R/libraries.R"))
+```
+
+Create summarized experiment of raw data
+```{r, include=FALSE}
+#Load in data
+df <- read_excel(here::here('data-raw/data.xlsx')) %>% 
+    tibble::column_to_rownames("sample") %>% 
+    t() %>% 
+    as.data.frame() %>% 
+    dplyr::rename_with(snakecase::to_snake_case)
+
+#Load in metadata
+metadata <- read_excel(here::here('data-raw/design_raw.xlsx')) %>% 
+    tibble::column_to_rownames("sample") %>% 
+    dplyr::mutate_at(c("id", "time", "site"), factor)
+
+#Create summarized experiment
+se_raw <- PhosphoExperiment(assay = list(abundance = df), colData=metadata)
+
+#Save data
+usethis::use_data(se_raw, overwrite = TRUE)
+
+usethis::use_data(metadata, overwrite = TRUE)
+```
+
+
+```{r}
+color = metadata$id
+
+plot1 <- plotQC(SummarizedExperiment::assay(se_raw), 
+                labels=colnames(SummarizedExperiment::assay(se_raw)), 
+                panel = "dendrogram", grps = color)+
+                ggplot2::ggtitle("No scaling")
+
+plot2 <- plotQC(SummarizedExperiment::assay(se_raw),
+                labels=colnames(SummarizedExperiment::assay(se_raw)), 
+                panel = "pca", grps = color)+
+                ggplot2::ggtitle("No scaling")
+
+
+ggpubr::ggarrange(plot1, plot2, nrow = 1, ncol = 2)
+```
+

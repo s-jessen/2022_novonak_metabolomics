@@ -1,0 +1,102 @@
+---
+title: "1_data_preparation"
+format: html
+editor: source
+---
+
+Load in libraries and data
+```{r, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+source(here::here("R/functions.R"))
+source(here::here("R/libraries.R"))
+
+load(here::here('data/se_raw.rda'))
+load(here::here('data/metadata.rda'))
+```
+
+Extract data from SE and convert them to long format
+```{r}
+#Extract assay and create dataframe
+df <- SummarizedExperiment::assay(se_raw)
+
+#Convert to long format
+df_long <- df %>% 
+    rownames_to_column(var="metabolite") %>% 
+    melt(id.var="metabolite") %>% 
+    dplyr::rename(sample = variable,
+           abundance = value) %>% 
+    merge((metadata %>% rownames_to_column("sample")), by="sample") %>%
+    dplyr::relocate(metabolite, 1) %>% 
+    dplyr::relocate(abundance, .after=id)
+```
+
+Calculations (creates: *df_long_ratios*)
+```{r}
+#Multiply raw arterial and venous samples by haematocrit corrected blood flow
+df_long_flow_corrected <- df_long %>% 
+    dplyr::mutate(abundance = flow*(abundance * (1-hb)))
+
+#Divide arterial by venous data
+df_long_ratios <- df_long_flow_corrected %>% 
+    dplyr::group_by(metabolite, id, time) %>% 
+    dplyr::summarise(av_ratio = log2(abundance[site == "a"] / abundance[site == "v"])) #Takes ratio and log2 transforms values
+
+#Write to excel sheet
+writexl::write_xlsx(df_long_ratios, here::here('data/df_long_ratios.xlsx')) 
+
+#Save data
+usethis::use_data(df_long_ratios, overwrite = TRUE)
+
+```
+Convert to wide format (creates: *se_ratios*)
+Now we take our calculated AV ratios and put them back into the standard wide format. We'll save as a SummarizedExperiment for ease
+```{r}
+#Create new copy of metadata used for merging the "sample" column into the df_long_ratios in next step. Necessary because they will be the column names in wide format data frame. 
+metadata2 <- metadata %>% 
+    tibble::rownames_to_column("sample") %>% 
+    dplyr::select(-c("hb", "flow")) %>% #Filter unnecessary columns
+    dplyr::filter(site == 'a') %>%  #Need to filter away half the samples, because in df_long_ratio, there is only one sample per time point (because they're ratios)
+    dplyr::mutate(sample2 = sample) %>% 
+    tibble::column_to_rownames("sample2")
+    
+    
+#Pivot the long format data frame into wide format
+df_wide_ratios <- df_long_ratios %>% 
+    dplyr::select(c("metabolite", "id", "time", "av_ratio")) %>%
+    merge(metadata2[,c("sample", "id", "time")], by=c("time", "id")) %>%
+    dplyr::select(-c("time", "id")) %>% 
+    pivot_wider(names_from = sample, values_from = av_ratio) %>% 
+    column_to_rownames("metabolite")
+
+#Columns are out of order after pivoting from long to wide. They need to be in order to construct summarized experiment
+col_order <- c("s_1", "s_2", "s_3", "s_4", "s_5", "s_11", "s_12", "s_13", "s_14", "s_15", "s_21", "s_22", "s_23", "s_24", "s_25", "s_31", "s_32", "s_33", "s_34", "s_35", "s_41", "s_42", "s_43", "s_44", "s_45", "s_51", "s_52", "s_53", "s_54", "s_55")
+
+df_wide_ratios <- df_wide_ratios[,col_order]
+
+#Create SummarizedExperiments that stores both the raw and the medianscaled df
+se_ratios <- PhosphoExperiment(assay = list(ratios = df_wide_ratios), colData=metadata2)
+
+#Save as data file
+usethis::use_data(se_ratios, overwrite = TRUE)
+
+```
+We can now move on to create our long format summary dataframe (creates: *df_long_ratios_summary*)
+```{r}
+#Create new long format datasheet and summarize for mean, standard deviation, and median.
+df_long_ratios_summary <- df_long_ratios %>% 
+    group_by(metabolite, time) %>% 
+    summarise(av_ratio_mean = mean(av_ratio),
+              av_ratio_sd = sd(av_ratio),
+              av_ratio_median = median(av_ratio),
+              n = n()
+              )
+
+#Write to excel sheet
+writexl::write_xlsx(df_long_ratios_summary, here::here('data/df_long_ratios_summary.xlsx')) 
+
+#Save data
+usethis::use_data(df_long_ratios_summary, overwrite = TRUE)
+
+```
+
+

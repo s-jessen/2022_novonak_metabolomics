@@ -1,0 +1,193 @@
+---
+title: "1_data_preparation"
+format: html
+editor: source
+---
+
+Load in libraries and data
+```{r, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+source("R/functions.R")
+source("R/libraries.R")
+
+load(here::here('data/metadata.rda'))
+load(here::here('data/df_long_ratios.rda'))
+load(here::here('data/df_long_ratios_summary.rda'))
+load(here::here('data/se_ratios.rda'))
+```
+
+*Two sample t-tests, limma*
+baseline vs. exercise
+
+```{r}
+#Exercise
+se_ratios_exercise <- se_ratios[, se_ratios$time == "baseline" | se_ratios$time == 'exercise']
+
+#Nedenstående subsetter ikke for de korrekte kolonner
+design <- model.matrix(~0 + se_ratios_exercise$time)[, 1:2]
+
+colnames(design) <- c("baseline", "exercise")
+
+correlation <- duplicateCorrelation(assay(se_ratios_exercise), design, block = se_ratios_exercise$id)
+
+contrast <- makeContrasts(exercise - baseline, levels = design)
+
+fit <- eBayes(lmFit(assay(se_ratios_exercise), design, block = se_ratios_exercise$id, correlation = correlation$consensus))
+fit2 <- eBayes(contrasts.fit(fit, contrast))
+
+results_limma_exercise <- topTable(fit2, coef = 1, number = Inf, sort.by = "logFC") %>%
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>%
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+    ) %>%
+    arrange(desc(logFC)) %>% 
+    dplyr::mutate(time = "exercise")
+
+#Write to excel sheet
+writexl::write_xlsx(results_limma_exercise, here::here('data/limma/results_baseline_vs_exercise.xlsx')) 
+
+```
+
+```{r}
+#pre
+se_ratios_pre <- se_ratios[, se_ratios$time == "baseline" | se_ratios$time == 'pre']
+
+#Nedenstående subsetter ikke for de korrekte kolonner
+design <- model.matrix(~0 + se_ratios_pre$time)[, c(1,3)]
+
+colnames(design) <- c("baseline", "pre")
+
+correlation <- duplicateCorrelation(assay(se_ratios_pre), design, block = se_ratios_pre$id)
+
+contrast <- makeContrasts(pre - baseline, levels = design)
+
+fit <- eBayes(lmFit(assay(se_ratios_pre), design, block = se_ratios_pre$id, correlation = correlation$consensus))
+fit2 <- eBayes(contrasts.fit(fit, contrast))
+
+results_limma_pre <- topTable(fit2, coef = 1, number = Inf, sort.by = "logFC") %>%
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>%
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+    ) %>%
+    arrange(desc(logFC)) %>% 
+    dplyr::mutate(time = "pre")
+
+#Write to excel sheet
+writexl::write_xlsx(results_limma_pre, here::here('data/limma/results_baseline_vs_pre.xlsx')) 
+```
+
+
+```{r}
+#Rec60
+se_ratios_rec60 <- se_ratios[, se_ratios$time == "baseline" | se_ratios$time == 'rec60']
+
+#Nedenstående subsetter ikke for de korrekte kolonner
+design <- model.matrix(~0 + se_ratios_rec60$time)[, c(1,5)]
+
+colnames(design) <- c("baseline", "rec60")
+
+correlation <- duplicateCorrelation(assay(se_ratios_rec60), design, block = se_ratios_rec60$id)
+
+contrast <- makeContrasts(rec60 - baseline, levels = design)
+
+fit <- eBayes(lmFit(assay(se_ratios_rec60), design, block = se_ratios_rec60$id, correlation = correlation$consensus))
+fit2 <- eBayes(contrasts.fit(fit, contrast))
+
+results_limma_rec60 <- topTable(fit2, coef = 1, number = Inf, sort.by = "logFC") %>%
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>%
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+    ) %>%
+    arrange(desc(logFC)) %>% 
+    dplyr::mutate(time = "rec60")
+
+#Write to excel sheet
+writexl::write_xlsx(results_limma_rec60, here::here('data/limma/results_baseline_vs_rec60.xlsx')) 
+```
+
+```{r}
+#Rec180
+se_ratios_rec180 <- se_ratios[, se_ratios$time == "baseline" | se_ratios$time == 'rec180']
+
+#Nedenstående subsetter ikke for de korrekte kolonner
+design <- model.matrix(~0 + se_ratios_rec180$time)[, c(1,4)]
+
+colnames(design) <- c("baseline", "rec180")
+
+correlation <- duplicateCorrelation(assay(se_ratios_rec180), design, block = se_ratios_rec180$id)
+
+contrast <- makeContrasts(rec180 - baseline, levels = design)
+
+fit <- eBayes(lmFit(assay(se_ratios_rec180), design, block = se_ratios_rec180$id, correlation = correlation$consensus))
+fit2 <- eBayes(contrasts.fit(fit, contrast))
+
+results_limma_rec180 <- topTable(fit2, coef = 1, number = Inf, sort.by = "logFC") %>%
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>%
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+    ) %>%
+    arrange(desc(logFC)) %>% 
+    dplyr::mutate(time = "rec180")
+
+#Write to excel sheet
+writexl::write_xlsx(results_limma_rec180, here::here('data/limma/results_baseline_vs_rec180.xlsx')) 
+```
+
+
+```{r}
+volcano_all_two_sample(xiao, 0.05)
+
+ggsave(here::here('data/figures/volcano_all_two_sample.pdf'), width = 15, height = 10)
+```
+
+
+```{r}
+df_heatmap <- SummarizedExperiment::assay(se_ratios)
+
+#Heatmap
+heatmap <- pheatmap(df_heatmap,
+    scale = "row",
+    cluster_rows = T,
+    cluster_cols = T,
+    annotation_col = dplyr::select(metadata, c("time", "id")),
+    #annotation_colors=list(time="#C06C84"),
+    clustering_distance_cols="correlation",
+    clustering_distance_rows = "correlation",
+    clustering_method = "ward",
+    show_rownames = F,
+    color=colorRampPalette(c("navy", "white", "red"))(50),
+    #cellwidth =10,
+    #cellheight = 10,
+    border_color = "white"
+    )
+
+#ggplot2::ggsave(here::here('data/figures/heatmap.pdf'), plot=heatmap)
+
+```
+
+```{r}
+
+time_course_single(df_long_ratios, "Tauroursodeoxycholic Acid_iso2")
+
+```
+
