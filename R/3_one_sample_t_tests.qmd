@@ -30,10 +30,9 @@ results_one_sample_rec180 <- readxl::read_excel(here::here('data/results/results
 
 
 ```{r}
-volcano_all(xiao, 0.05)
+volcano_all(qiao, 0.05)
 
-ggsave(here::here('data/figures/volcano_all.png'), width = 15, height = 10)
+ggsave(here::here('data/figures/volcano_all_new_calc.png'), width = 15, height = 10)
 ```
-
 
 

@@ -134,7 +134,7 @@ volcano_all <-function (type, threshold) {
               panel.border = element_rect(colour = "black", fill=NA),
               panel.grid.minor=element_blank(),
               panel.grid.major = element_blank(),
-              plot.background = element_blank(),
+              plot.background = element_rect(color="white"),
               plot.title = element_text(size=12),
               axis.line = element_line(colour = "black"),
               text = element_text(size = 15), #family="Source Sans Pro"),
@@ -201,7 +201,7 @@ for (i in timepoints){
     results_one_sample <- {{df}} %>%
         dplyr::filter(time == i) %>%
         dplyr::group_by(time, metabolite) %>%
-        t_test(av_ratio ~ 1, mu=0, detailed=TRUE) %>% #One sample t-test
+        t_test(av_dif_log2 ~ 1, mu=0, detailed=TRUE) %>% #One sample t-test
         dplyr::select(metabolite, time, estimate, p) %>%
         dplyr::rename(logFC=estimate,
                       P.Value = p)
@@ -209,12 +209,12 @@ for (i in timepoints){
     #Add extra columns
     results_one_sample <- results_one_sample %>%
         dplyr::mutate(xiao=10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>%
-        dplyr::mutate(q = qvalue::qvalue(.$P.Value)$qvalues) %>%
+        dplyr::mutate(q = qvalue::qvalue(.$P.Value, lambda=0)$qvalues) %>%
         dplyr::mutate("-log10p" = -log10(.$P.Value)) %>% #Adds -log10p column for volcano plot
         dplyr::mutate(regulated = case_when(xiao < 0.05 ~ "+")) %>%   #Adds a column called "regulated" with or without '+' depending on xiao value
         dplyr::relocate(metabolite, .before=logFC) %>%
         dplyr::arrange(desc(logFC)) %>%  #Arrange in descending order based on logFC
-        dplyr::mutate(qiao = qvalue::qvalue(.$xiao)$qvalues)
+        dplyr::mutate(qiao = qvalue::qvalue(.$xiao, lambda=0)$qvalues)
 
 
     #Write to excel sheet
