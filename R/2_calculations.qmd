@@ -14,10 +14,11 @@ load(here::here('data/se_raw.rda'))
 load(here::here('data/metadata.rda'))
 ```
 
-Extract data from SE and convert them to long format
+
+We need a long format data file for calculating AV ratios:
 ```{r}
 #Extract assay and create dataframe
-df <- SummarizedExperiment::assay(se_raw)
+df <- SummarizedExperiment::assay(se_log2)
 
 #Convert to long format
 df_long <- df %>% 
@@ -27,7 +28,22 @@ df_long <- df %>%
            abundance = value) %>% 
     merge((metadata %>% rownames_to_column("sample")), by="sample") %>%
     dplyr::relocate(metabolite, 1) %>% 
-    dplyr::relocate(abundance, .after=id)
+    dplyr::relocate(abundance, .after=id) %>% 
+    dplyr::mutate(missing = ifelse(is.na(abundance), '+', ''))
+```
+
+Long format dataframe of log2 values
+```{r}
+df_long_log2_summary <- df_long %>%
+    dplyr::mutate(abundance = log2(abundance)) %>% 
+    group_by(metabolite, time) %>% 
+    summarise(mean = mean(abundance),
+              n = sum(!is.na(abundance))
+              )
+
+#Save data
+usethis::use_data(df_long_log2_summary, overwrite = TRUE)
+
 ```
 
 Calculations (creates: *df_long_ratios*)
@@ -48,6 +64,7 @@ writexl::write_xlsx(df_long_ratios, here::here('data/df_long_ratios.xlsx'))
 usethis::use_data(df_long_ratios, overwrite = TRUE)
 
 ```
+
 Convert to wide format (creates: *se_ratios*)
 Now we take our calculated AV ratios and put them back into the standard wide format. We'll save as a SummarizedExperiment for ease
 ```{r}
@@ -80,6 +97,7 @@ se_ratios <- PhosphoExperiment(assay = list(ratios = df_wide_ratios), colData=me
 usethis::use_data(se_ratios, overwrite = TRUE)
 
 ```
+
 We can now move on to create our long format summary dataframe (creates: *df_long_ratios_summary*)
 ```{r}
 #Create new long format datasheet and summarize for mean, standard deviation, and median.

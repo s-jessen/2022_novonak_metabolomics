@@ -1,0 +1,325 @@
+---
+title: "1_data_preparation"
+format: html
+editor: source
+---
+
+Load in libraries and data
+```{r, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+source(here::here("R/functions.R"))
+source(here::here("R/libraries.R"))
+
+load(here::here('data/se_raw.rda'))
+load(here::here('data/metadata.rda'))
+```
+
+
+pre
+```{r}
+#Subset dataset for specific time point
+se_pre <- se_log2[, se_log2$time=='pre']
+
+design <- model.matrix(~0 + se_pre$site)
+
+colnames(design) = c("a", "v")
+
+correlation <- duplicateCorrelation(assay(se_pre), design, block=se_pre$id)
+
+contrast <- makeContrasts(a - v,
+                             levels = design)
+
+fit <- eBayes(lmFit(assay(se_pre), design, block=se_pre$id, correlation=correlation$consensus))
+
+fit2 <- eBayes(contrasts.fit(fit, contrast))
+
+results_pre <- topTable(fit2, coef = 1, number = Inf, sort.by = "logFC") %>% 
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>% 
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+                  )%>% 
+    dplyr::mutate(time = "pre") %>% 
+    arrange(desc(logFC))
+
+#Write to excel sheet
+writexl::write_xlsx(results_pre, here::here('data/limma_a_v/results_limma_pre.xlsx'))
+
+```
+
+baseline
+```{r}
+#Subset dataset for specific time point
+se_baseline <- se_log2[, se_log2$time=='baseline']
+
+design <- model.matrix(~0 + se_baseline$site)
+
+colnames(design) = c("a", "v")
+
+correlation <- duplicateCorrelation(assay(se_baseline), design, block=se_baseline$id)
+
+contrast <- makeContrasts(a - v,
+                             levels = design)
+
+fit <- eBayes(lmFit(assay(se_baseline), design, block=se_baseline$id, correlation=correlation$consensus))
+
+fit2 <- eBayes(contrasts.fit(fit, contrast))
+
+results_baseline <- topTable(fit2, coef = 1, number = Inf, sort.by = "logFC") %>% 
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>% 
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+                  )%>% 
+    dplyr::mutate(time = "baseline") %>% 
+    arrange(desc(logFC))
+
+#Write to excel sheet
+writexl::write_xlsx(results_baseline, here::here('data/limma_a_v/results_baseline.xlsx'))
+
+```
+
+exercise
+```{r}
+#Subset dataset for specific time point
+se_exercise <- se_log2[, se_log2$time=='exercise']
+
+design <- model.matrix(~0 + se_exercise$site)
+
+colnames(design) = c("a", "v")
+
+correlation <- duplicateCorrelation(assay(se_exercise), design, block=se_exercise$id)
+
+contrast <- makeContrasts(a - v,
+                             levels = design)
+
+fit <- eBayes(lmFit(assay(se_exercise), design, block=se_exercise$id, correlation=correlation$consensus))
+
+fit2 <- eBayes(contrasts.fit(fit, contrast))
+
+results_exercise <- topTable(fit2, coef = 1, number = Inf, sort.by = "logFC") %>% 
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>% 
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+                  )%>% 
+    dplyr::mutate(time = "exercise") %>% 
+    arrange(desc(logFC))
+
+#Write to excel sheet
+writexl::write_xlsx(results_exercise, here::here('data/limma_a_v/results_exercise.xlsx'))
+
+```
+
+rec60
+```{r}
+#Subset dataset for specific time point
+se_rec60 <- se_log2[, se_log2$time=='rec60']
+
+design <- model.matrix(~0 + se_rec60$site)
+
+colnames(design) = c("a", "v")
+
+correlation <- duplicateCorrelation(assay(se_rec60), design, block=se_rec60$id)
+
+contrast <- makeContrasts(a - v,
+                             levels = design)
+
+fit <- eBayes(lmFit(assay(se_rec60), design, block=se_rec60$id, correlation=correlation$consensus))
+
+fit2 <- eBayes(contrasts.fit(fit, contrast))
+
+results_rec60 <- topTable(fit2, coef = 1, number = Inf, sort.by = "logFC") %>% 
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>% 
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+                  )%>% 
+    dplyr::mutate(time = "rec60") %>% 
+    arrange(desc(logFC))
+
+#Write to excel sheet
+writexl::write_xlsx(results_rec60, here::here('data/limma_a_v/results_rec60.xlsx'))
+
+```
+
+rec180
+```{r}
+
+#Subset dataset for specific time point
+se_rec180 <- se_log2[, se_log2$time=='rec180']
+
+design <- model.matrix(~0 + se_rec180$site)
+
+colnames(design) = c("a", "v")
+
+correlation <- duplicateCorrelation(assay(se_rec180), design, block=se_rec180$id)
+
+contrast <- makeContrasts(a - v,
+                             levels = design)
+
+fit <- eBayes(lmFit(assay(se_rec180), design, block=se_rec180$id, correlation=correlation$consensus))
+
+fit2 <- eBayes(contrasts.fit(fit, contrast))
+
+results_rec180 <- topTable(fit2, coef = 1, number = Inf, sort.by = "logFC") %>% 
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>% 
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+                  )%>% 
+    dplyr::mutate(time = "rec180") %>% 
+    arrange(desc(logFC))
+
+#Write to excel sheet
+writexl::write_xlsx(results_rec180, here::here('data/limma_a_v/results_rec180.xlsx'))
+
+```
+
+Volcanoes
+```{r}
+all_results <- rbind(results_pre, results_baseline, results_exercise, results_rec60, results_rec180)
+
+volcanoes <- all_results%>%
+    mutate(color = case_when(
+        logFC >= 0 & xiao <= 0.05 ~ "Uptake",
+        logFC <= 0 & xiao <= 0.05 ~ "Release",
+        TRUE ~ "Unchanged")) %>%
+    ggplot(aes(x=logFC, y=-log10(P.Value), label = metabolite))+
+    geom_point(aes(color = color), size = 1.5)+
+    theme(panel.background = element_blank(),
+          panel.border = element_rect(colour = "black", fill=NA),
+          panel.grid.minor=element_blank(),
+          panel.grid.major = element_blank(),
+          plot.background = element_rect(color = "white"),
+          plot.title = element_text(size=12),
+          axis.line = element_line(colour = "black"),
+          text = element_text(size = 8), #family="Source Sans Pro"),
+          legend.title = element_blank(),
+          legend.key = element_blank(),
+    )+
+    geom_text_repel(point.size=4, size=1, min.segment.length = Inf, force=0.3)+
+    scale_color_manual(breaks = c("Uptake", "Release", "Unchanged"),
+                       values=c("dodgerblue3", "firebrick3", "gray50"))+
+    xlab("Log2fold change") + ylab("-log10(p)")+
+    facet_grid(~factor(time, levels=c('pre', 'baseline', 'exercise', 'rec60', 'rec180')))
+
+#ggplot2::ggsave(here::here('data/figures/volcanoes/volcanoes_limma_xiao.pdf'), height = 5, width = 15, plot = volcanoes)
+
+ggplot2::ggsave(here::here('data/figures/volcanoes/volcanoes_limma_xiao.pdf'), height=100, width=200, units = "mm", plot = volcanoes)
+```
+
+```{r}
+results_combined <- rbind(results_pre, results_baseline, results_exercise, results_rec60, results_rec180)
+
+df_long_log2_summary %>% 
+    merge(results_combined[,c("time", "metabolite", "logFC", "xiao")], by=c("time", "metabolite")) %>% #Merge the "regulated" column into results_combined
+    #dplyr::filter(xiao < 0.05) %>% #Filter for only significant metabolites
+    dplyr::mutate(direction = ifelse(logFC > 0, "Uptake", "Release")) %>% #Creates a new column for color coding the plot
+    dplyr::mutate(logFC = abs(logFC)) %>% #Makes all values positive
+    dplyr::mutate(time = factor(time, levels = c("pre", "baseline", "exercise", "rec60", "rec180"))) %>% 
+    dplyr::filter(!logFC == 0) %>% 
+    #dplyr::filter(regulated == '+') %>% 
+    ggplot2::ggplot(aes(x=time, fill=direction))+
+    geom_bar(aes(y = ..count..), stat = "count", position = "dodge")+
+    theme(
+        panel.background = element_blank(),
+        panel.border = element_rect(colour = "black", fill=NA),
+        panel.grid.minor=element_blank(),
+        panel.grid.major = element_blank(),
+        plot.background = element_blank(),
+        axis.line = element_line(colour = "black"),
+        text = element_text(size = 15, family="Source Sans Pro"),
+        axis.title = element_text(size = 12, family="Source Sans Pro"),
+        legend.title = element_blank(),
+        legend.key = element_blank()
+        )+
+    scale_fill_manual(breaks = c("Release", "Uptake"),
+                           values=c("#627282", "#b19f91"))+
+    labs(y="Number of metabolites", x="Time")+
+    ggtitle("All metabolites, release and uptake")
+```
+
+Eulerr of shared uptake metabolites across timepoints
+```{r}
+euler_uptake_obj <- 
+    euler(
+        list(
+            #Pre = dplyr::filter(results_one_sample_pre, xiao <0.05 & logFC < 0)$metabolite,
+            #Baseline = dplyr::filter(results_one_sample_baseline, xiao <0.05 & logFC < 0)$metabolite,
+            Exercise = dplyr::filter(results_exercise, xiao <0.05 & logFC > 0)$metabolite,
+            Rec60 = dplyr::filter(results_rec60, xiao <0.05 & logFC > 0)$metabolite,
+            Rec180 = dplyr::filter(results_rec180, xiao <0.05 & logFC > 0)$metabolite 
+        ), 
+        shape = "ellipse") 
+    
+
+euler_uptake_plot <- plot(euler_uptake_obj, 
+                           fills = c("#516067", "#d8cfc0", "#a74a43"),
+                           quantities = list(type = "counts"),
+                           legend =TRUE,
+                           main = "Shared uptake metabolites"
+                            )
+
+euler_uptake_plot
+eulerr::error_plot(euler_uptake_obj)
+euler_uptake_obj
+
+```
+
+Eulerr of shared release metabolites across timepoints
+```{r}
+euler_release_obj <- 
+    euler(
+        list(
+            #Pre = dplyr::filter(results_one_sample_pre, xiao <0.05 & logFC < 0)$metabolite,
+            #Baseline = dplyr::filter(results_one_sample_baseline, xiao <0.05 & logFC < 0)$metabolite,
+            Exercise = dplyr::filter(results_exercise, xiao <0.05 & logFC < 0)$metabolite,
+            Rec60 = dplyr::filter(results_rec60, xiao <0.05 & logFC < 0)$metabolite,
+            Rec180 = dplyr::filter(results_rec180, xiao <0.05 & logFC < 0)$metabolite 
+        ), 
+        shape = "ellipse") 
+    
+
+euler_release_plot <- plot(euler_release_obj, 
+                           fills = c("#516067", "#d8cfc0", "#a74a43"),
+                           quantities = list(type = "counts"),
+                           legend =TRUE,
+                           main = "Shared release metabolites"
+                            )
+
+euler_release_plot
+eulerr::error_plot(euler_release_obj)
+euler_release_obj
+```
+
+
+```{r}
+df_long %>% 
+    dplyr::filter(metabolite == "LCP1") %>% 
+    dplyr::mutate(time = factor(time, levels = c("pre", "baseline", "exercise", "rec60", "rec180"))) %>% 
+    dplyr::mutate(abundance = log2(abundance)) %>% 
+    ggplot(aes(x = time, y = abundance, color = site))+
+    geom_point(position = position_dodge(0.5), size = 5)+
+    theme_bw()
+```

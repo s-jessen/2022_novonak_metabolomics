@@ -17,7 +17,9 @@ df <- read_excel(here::here('data-raw/data.xlsx')) %>%
     tibble::column_to_rownames("sample") %>% 
     t() %>% 
     as.data.frame() %>% 
-    dplyr::rename_with(snakecase::to_snake_case)
+    dplyr::rename_with(snakecase::to_snake_case) %>% 
+    dplyr::mutate_all(as.numeric) %>% 
+    dplyr::mutate_all(log2)
 
 #Load in metadata
 metadata <- read_excel(here::here('data-raw/design_raw.xlsx')) %>% 
@@ -35,19 +37,42 @@ usethis::use_data(metadata, overwrite = TRUE)
 
 
 ```{r}
+df_medianscaled <- PhosR::medianScaling(df)
+
+boxplot(df, main = "Not normalized")
+boxplot(df_medianscaled, main = "Medianscaled")
+```
+
+```{r}
 color = metadata$id
 
-plot1 <- plotQC(SummarizedExperiment::assay(se_raw), 
-                labels=colnames(SummarizedExperiment::assay(se_raw)), 
+plot1 <- plotQC(df, 
+                labels=colnames(df), 
                 panel = "dendrogram", grps = color)+
                 ggplot2::ggtitle("No scaling")
 
-plot2 <- plotQC(SummarizedExperiment::assay(se_raw),
-                labels=colnames(SummarizedExperiment::assay(se_raw)), 
+plot2 <- plotQC(df_medianscaled,
+                labels=colnames(df_medianscaled), 
+                panel = "dendrogram", grps = color)+
+                ggplot2::ggtitle("Medianscaled")
+
+plot3 <- plotQC(df,
+                labels=colnames(df), 
                 panel = "pca", grps = color)+
                 ggplot2::ggtitle("No scaling")
 
+plot4 <- plotQC(df_medianscaled,
+                labels=colnames(df_medianscaled), 
+                panel = "pca", grps = color)+
+                ggplot2::ggtitle("Medianscaled")
 
-ggpubr::ggarrange(plot1, plot2, nrow = 1, ncol = 2)
+ggpubr::ggarrange(plot1, plot2, plot3, plot4, nrow = 2, ncol = 2)
+
+```
+
+```{r}
+se_log2 <- PhosR::PhosphoExperiment(assay = df, colData=metadata)
+
+usethis::use_data(se_log2, overwrite = TRUE)
 ```
 
