@@ -1,0 +1,78 @@
+---
+title: "release"
+format: html
+---
+
+Load in libraries and data
+```{r, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+source("R/functions.R")
+source("R/libraries.R")
+source("R/limma_results.R")
+
+load(here::here('data/se.rda'))
+load(here::here('data/metadata.rda'))
+load(here::here('data/df_long.rda'))
+load(here::here('data/df_long_summary.rda'))
+load(here::here('data/df_long_av_difference.rda'))
+load(here::here('data/df_long_av_difference_summary.rda'))
+```
+
+Time course data of specified peptide
+```{r}
+time_course_single(df_long_av_difference, "GEGDFLAEGGGV")
+```
+
+
+Heatmap (log2 values)
+```{r}
+df_heatmap <- SummarizedExperiment::assay(se)
+
+#Heatmap
+heatmap <- pheatmap(df_heatmap,
+    scale = "row",
+    cluster_rows = T,
+    cluster_cols = T,
+    annotation_col = dplyr::select(metadata, c("time", "id")),
+    #annotation_colors=list(time="#C06C84"),
+    clustering_distance_cols="correlation",
+    clustering_distance_rows = "correlation",
+    clustering_method = "ward.D2",
+    show_rownames = F,
+    color=colorRampPalette(c("navy", "white", "red"))(50),
+    #cellwidth =10,
+    #cellheight = 10,
+    border_color = "white"
+    )
+
+#ggplot2::ggsave(here::here('data/figures/heatmap.pdf'), plot=heatmap)
+
+```
+
+Heatmap (av_difference)
+```{r}
+df_heatmap <- df_long_av_difference %>% 
+    dplyr::select(c("sample", "peptide", "av_difference")) %>% 
+    pivot_wider(names_from = sample, values_from = av_difference) %>% 
+    column_to_rownames("peptide")
+
+#Heatmap
+heatmap <- pheatmap(df_heatmap,
+    scale = "row",
+    cluster_rows = T,
+    cluster_cols = T,
+    annotation_col = dplyr::select(metadata, c("time", "id")),
+    #annotation_colors=list(time="#C06C84"),
+    clustering_distance_cols="correlation",
+    clustering_distance_rows = "correlation",
+    clustering_method = "ward.D2",
+    show_rownames = F,
+    color=colorRampPalette(c("navy", "white", "red"))(50),
+    #cellwidth =10,
+    #cellheight = 10,
+    border_color = "white"
+    )
+
+#ggplot2::ggsave(here::here('data/figures/heatmap.pdf'), plot=heatmap)
+
+```

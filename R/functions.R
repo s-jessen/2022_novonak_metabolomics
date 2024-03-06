@@ -121,7 +121,7 @@ volcano <- function (dataset, type, threshold) {
 
 volcano_all <-function (type, threshold) {
 
-    all_results <- rbind(results_one_sample_pre, results_one_sample_baseline, results_one_sample_exercise, results_one_sample_rec60, results_one_sample_rec180)
+    all_results <- rbind(results_pre, results_baseline, results_exercise, results_rec60, results_rec180)
 
     all_results%>%
         mutate(color = case_when(

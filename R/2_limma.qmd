@@ -1,0 +1,131 @@
+---
+title: "release"
+format: html
+---
+
+Load in libraries and data
+```{r, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+source("R/functions.R")
+source("R/libraries.R")
+
+load(here::here('data/se.rda'))
+load(here::here('data/metadata.rda'))
+load(here::here('data/df_long.rda'))
+load(here::here('data/df_long_summary.rda'))
+load(here::here('data/df_long_av_difference.rda'))
+load(here::here('data/df_long_av_difference_summary.rda'))
+```
+
+#Limma:
+
+all:
+```{r}
+TS_interaction <- paste(se$time, se$site, sep=".")
+
+TS_interaction <- factor(TS_interaction, levels=c("pre.a", "pre.v", "baseline.a", "baseline.v", "exercise.a", "exercise.v", "rec60.a", "rec60.v", "rec180.a", "rec180.v"))
+
+design <- model.matrix(~0+ TS_interaction)
+
+colnames(design) = c("pre.a", "pre.v", "baseline.a", "baseline.v", "exercise.a", "exercise.v", "rec60.a", "rec60.v", "rec180.a", "rec180.v")
+
+correlation <- duplicateCorrelation(assay(se), design, block=se$id)
+
+contrast <- makeContrasts(pre.a - pre.v,
+                          baseline.a - baseline.v,
+                          exercise.a - exercise.v,
+                          rec60.a - rec60.v,
+                          rec180.a - rec180.v,
+                          levels = design)
+
+fit <- eBayes(lmFit(assay(se), design, block=se$id, correlation=correlation$consensus))
+
+fit2 <- eBayes(contrasts.fit(fit, contrast))
+
+#pre
+results_pre <- topTable(fit2, coef = 1, number = Inf, sort.by = "logFC") %>% 
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>% 
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+                  )%>% 
+    dplyr::mutate(time = "pre") %>% 
+    arrange(desc(logFC))
+
+writexl::write_xlsx(results_pre, here::here('data/limma_a_v/results_limma_pre.xlsx'))
+usethis::use_data(results_pre, overwrite = TRUE)
+
+#baseline
+results_baseline <- topTable(fit2, coef = 2, number = Inf, sort.by = "logFC") %>% 
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>% 
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+                  )%>% 
+    dplyr::mutate(time = "baseline") %>% 
+    arrange(desc(logFC))
+
+writexl::write_xlsx(results_baseline, here::here('data/limma_a_v/results_limma_baseline.xlsx'))
+usethis::use_data(results_baseline, overwrite = TRUE)
+
+#exercise
+results_exercise <- topTable(fit2, coef = 3, number = Inf, sort.by = "logFC") %>% 
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>% 
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+                  )%>% 
+    dplyr::mutate(time = "exercise") %>% 
+    arrange(desc(logFC))
+
+writexl::write_xlsx(results_exercise, here::here('data/limma_a_v/results_limma_exercise.xlsx'))
+usethis::use_data(results_exercise, overwrite = TRUE)
+
+#rec60
+results_rec60 <- topTable(fit2, coef = 4, number = Inf, sort.by = "logFC") %>% 
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>% 
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+                  )%>% 
+    dplyr::mutate(time = "rec60") %>% 
+    arrange(desc(logFC))
+
+writexl::write_xlsx(results_rec60, here::here('data/limma_a_v/results_limma_rec60.xlsx'))
+usethis::use_data(results_rec60, overwrite = TRUE)
+
+#rec180
+results_rec180 <- topTable(fit2, coef = 5, number = Inf, sort.by = "logFC") %>% 
+    dplyr::mutate(xiao = 10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>% 
+    dplyr::mutate(metabolite = row.names(.),
+                  q = qvalue(.$P.Value)$qvalues,
+                  qiao = qvalue(.$xiao)$qvalues,
+                  "-log10p" = -log10(.$P.Value),
+                  regulated_xiao = ifelse(xiao < 0.05, "+", ""),
+                  regulated_qiao = ifelse(qiao < 0.05, "+", ""),
+                  regulated_q = ifelse(q < 0.05, "+", "")
+                  )%>% 
+    dplyr::mutate(time = "rec180") %>% 
+    arrange(desc(logFC))
+
+writexl::write_xlsx(results_rec180, here::here('data/limma_a_v/results_limma_rec180.xlsx'))
+usethis::use_data(results_rec180, overwrite = TRUE)
+
+```
+

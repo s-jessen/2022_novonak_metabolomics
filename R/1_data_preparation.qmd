@@ -23,16 +23,25 @@ df <- read_excel(here::here('data-raw/data.xlsx')) %>%
 
 #Load in metadata
 metadata <- read_excel(here::here('data-raw/design_raw.xlsx')) %>% 
-    tibble::column_to_rownames("sample") %>% 
+    tibble::column_to_rownames("sample")
+
+#Remove pool samples from dataframe
+df <- df %>% 
+    dplyr::select(-all_of(rownames(metadata[metadata$id == "pool",])))
+
+#Remove pool samples from metadata
+metadata <- metadata %>% 
+    dplyr::filter(id != "pool") %>% 
     dplyr::mutate_at(c("id", "time", "site"), factor)
 
 #Create summarized experiment
-se_raw <- PhosphoExperiment(assay = list(abundance = df), colData=metadata)
+se <- PhosphoExperiment(assay = list(abundance = df), colData=metadata)
 
 #Save data
-usethis::use_data(se_raw, overwrite = TRUE)
+usethis::use_data(se, overwrite = TRUE)
 
 usethis::use_data(metadata, overwrite = TRUE)
+
 ```
 
 
@@ -43,36 +52,107 @@ boxplot(df, main = "Not normalized")
 boxplot(df_medianscaled, main = "Medianscaled")
 ```
 
+Check data
 ```{r}
 color = metadata$id
 
-plot1 <- plotQC(df, 
-                labels=colnames(df), 
+plot1 <- plotQC(SummarizedExperiment::assay(se), 
+                labels=colnames(SummarizedExperiment::assay(se)), 
                 panel = "dendrogram", grps = color)+
                 ggplot2::ggtitle("No scaling")
 
-plot2 <- plotQC(df_medianscaled,
-                labels=colnames(df_medianscaled), 
-                panel = "dendrogram", grps = color)+
-                ggplot2::ggtitle("Medianscaled")
-
-plot3 <- plotQC(df,
-                labels=colnames(df), 
+plot2 <- plotQC(SummarizedExperiment::assay(se),
+                labels=colnames(SummarizedExperiment::assay(se)), 
                 panel = "pca", grps = color)+
                 ggplot2::ggtitle("No scaling")
 
-plot4 <- plotQC(df_medianscaled,
-                labels=colnames(df_medianscaled), 
-                panel = "pca", grps = color)+
-                ggplot2::ggtitle("Medianscaled")
-
-ggpubr::ggarrange(plot1, plot2, plot3, plot4, nrow = 2, ncol = 2)
+ggpubr::ggarrange(plot1, plot2, nrow = 2)
 
 ```
 
+Check sample correlations
 ```{r}
-se_log2 <- PhosR::PhosphoExperiment(assay = df, colData=metadata)
+correlation_matrix <- cor(SummarizedExperiment::assay(se), method = "pearson")
 
-usethis::use_data(se_log2, overwrite = TRUE)
+annotation_colors = list(
+  id = setNames(c("#003f5c", "#58508d", "#bc5090", "#ff6361", "#ff6e54", "#ffa600"), levels(metadata$id)),
+  site = c(a = "#b9322c", v = "#295471"),
+  time = c(pre = "white", baseline = "#515c51", exercise = "#007776", rec60 = "#0089cc", rec180 = "#7f7dff")
+  )
+ 
+# Create the heatmap with a title and set the title font size to 8
+correlation_heatmap <- pheatmap(
+  correlation_matrix,
+  treeheight_row = 10,
+  treeheight_col = 10,
+  cluster_rows = T,
+  cluster_cols = T,
+  show_rownames = T,
+  show_colnames = T,
+  legend = T,
+  fontsize = 6,
+  color = colorRampPalette(c("white", "red"))(100),
+  clustering_distance_cols="euclidean",
+  clustering_distance_rows="euclidean",
+  clustering_method = "ward.D2",
+  annotation_col = dplyr::select(metadata, c("site", "id", "time")),
+  annotation_row = dplyr::select(metadata, c("site", "id", "time")),
+  annotation_colors= annotation_colors
+  )
+
 ```
 
+Create long form data set for plotting
+```{r}
+#Convert to long format
+df_long <- SummarizedExperiment::assay(se) %>% 
+    rownames_to_column(var="metabolite") %>% 
+    melt(id.var="metabolite") %>% 
+    dplyr::rename(sample = variable,
+           abundance = value) %>% 
+    merge((metadata %>% rownames_to_column("sample")), by="sample") %>%
+    dplyr::relocate(metabolite, 1) %>% 
+    dplyr::relocate(abundance, .after=id)
+
+#Save data
+usethis::use_data(df_long, overwrite = TRUE)
+```
+
+Summarize df_long for plotting
+```{r}
+df_long_summary <- df_long %>%
+    group_by(metabolite, time) %>% 
+    summarise(mean = mean(abundance),
+              median = median(abundance)
+              ) %>% 
+    dplyr::ungroup()
+
+#Save data
+usethis::use_data(df_long_summary, overwrite = TRUE)
+```
+
+Create long form av_difference dataset for plotting
+```{r}
+df_long_av_difference <- df_long %>% 
+    dplyr::group_by(metabolite, id, time) %>% 
+    dplyr::mutate(av_difference = abundance[site == "a"] - abundance[site == "v"]) %>% 
+    dplyr::filter(site == "a") %>% 
+    dplyr::select(-c("abundance", "site"))%>% 
+    dplyr::ungroup()
+
+#Save data
+usethis::use_data(df_long_av_difference, overwrite = TRUE)
+```
+
+Summarize df_long_av_difference
+```{r}
+df_long_av_difference_summary <- df_long_av_difference %>%
+    group_by(metabolite, time) %>% 
+    summarise(mean = mean(av_difference),
+              median = median(av_difference)
+              )%>% 
+    dplyr::ungroup()
+
+#Save data
+usethis::use_data(df_long_av_difference_summary, overwrite = TRUE)
+```
