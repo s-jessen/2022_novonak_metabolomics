@@ -1,0 +1,174 @@
+---
+title: "metabolomics"
+format: html
+editor: visual
+self-contained: true
+---
+
+```{r, message = FALSE, warning = FALSE, echo = F}
+
+setwd("C:/Users/vgz813/Desktop/R/2022_novonak_metabolomics")
+
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = F)
+source("R/functions.R")
+source("R/libraries.R")
+source("R/limma_results.R")
+
+load(here::here('data/se.rda'))
+load(here::here('data/metadata.rda'))
+load(here::here('data/df_long.rda'))
+load(here::here('data/df_long_summary.rda'))
+load(here::here('data/df_long_av_difference.rda'))
+load(here::here('data/df_long_av_difference_summary.rda'))
+```
+
+# Boxplot
+
+```{r}
+boxplot(SummarizedExperiment::assay(se), main = "Not normalized")
+```
+
+# PCA and dendogram
+
+```{r}
+color = metadata$id
+
+plot1 <- plotQC(SummarizedExperiment::assay(se), 
+                labels=colnames(SummarizedExperiment::assay(se)), 
+                panel = "dendrogram", grps = color)+
+                ggplot2::ggtitle("No scaling")
+
+plot2 <- plotQC(SummarizedExperiment::assay(se),
+                labels=colnames(SummarizedExperiment::assay(se)), 
+                panel = "pca", grps = color)+
+                ggplot2::ggtitle("No scaling")
+
+ggpubr::ggarrange(plot1, plot2, nrow = 2)
+
+```
+
+Samples cluster largely by id.
+
+# Sample correlations
+
+```{r}
+correlation_matrix <- cor(SummarizedExperiment::assay(se), method = "pearson")
+
+annotation_colors = list(
+  id = setNames(c("#003f5c", "#58508d", "#bc5090", "#ff6361", "#ff6e54", "#ffa600"), levels(metadata$id)),
+  site = c(a = "#b9322c", v = "#295471"),
+  time = c(pre = "white", baseline = "#515c51", exercise = "#007776", rec60 = "#0089cc", rec180 = "#7f7dff")
+  )
+ 
+# Create the heatmap with a title and set the title font size to 8
+correlation_heatmap <- pheatmap(
+  correlation_matrix,
+  treeheight_row = 10,
+  treeheight_col = 10,
+  cluster_rows = T,
+  cluster_cols = T,
+  show_rownames = T,
+  show_colnames = T,
+  legend = T,
+  fontsize = 6,
+  color = colorRampPalette(c("white", "red"))(100),
+  clustering_distance_cols="euclidean",
+  clustering_distance_rows="euclidean",
+  clustering_method = "ward.D2",
+  annotation_col = dplyr::select(metadata, c("site", "id", "time")),
+  annotation_row = dplyr::select(metadata, c("site", "id", "time")),
+  annotation_colors= annotation_colors
+  )
+```
+Very good sample correlations
+
+# Volcanoes
+
+```{r}
+volcano_all(xiao, 0.05)
+```
+
+# Uptake
+
+```{r}
+euler_uptake_obj <- 
+    euler(
+        list(
+            #Pre = dplyr::filter(results_pre, xiao <0.05 & logFC < 0)$metabolite,
+            #Baseline = dplyr::filter(results_baseline, xiao <0.05 & logFC < 0)$metabolite,
+            Exercise = dplyr::filter(results_exercise, xiao <0.05 & logFC > 0)$metabolite,
+            Rec60 = dplyr::filter(results_rec60, xiao <0.05 & logFC > 0)$metabolite,
+            Rec180 = dplyr::filter(results_rec180, xiao <0.05 & logFC > 0)$metabolite 
+        ), 
+        shape = "ellipse") 
+
+
+plot(euler_uptake_obj, 
+           fills = c("#516067", "#d8cfc0", "#a74a43"),
+           quantities = list(type = "counts"),
+           legend =TRUE,
+           main = "Shared uptake metabolites"
+            )
+```
+
+*Shared uptake between rec60 and rec180:*
+
+```{r}
+
+Reduce(intersect, list(dplyr::filter(results_rec60, xiao <0.05 & logFC > 0)$metabolite, 
+                       dplyr::filter(results_rec180, xiao <0.05 & logFC > 0)$metabolite))
+
+```
+
+# Release:
+```{r}
+euler_release_obj <- 
+    euler(
+        list(
+            #Pre = dplyr::filter(results_pre, xiao <0.05 & logFC < 0)$metabolite,
+            #Baseline = dplyr::filter(results_baseline, xiao <0.05 & logFC < 0)$metabolite,
+            Exercise = dplyr::filter(results_exercise, xiao <0.05 & logFC < 0)$metabolite,
+            Rec60 = dplyr::filter(results_rec60, xiao <0.05 & logFC < 0)$metabolite,
+            Rec180 = dplyr::filter(results_rec180, xiao <0.05 & logFC < 0)$metabolite  
+        ), 
+        shape = "ellipse") 
+    
+
+plot(euler_release_obj, 
+           fills = c("#516067", "#d8cfc0", "#a74a43"),
+           quantities = list(type = "counts"),
+           legend =TRUE,
+           main = "Shared release metabolites"
+            )
+```
+
+# Number of uptake and release metabolites
+
+```{r, message = F, warning = F}
+#Need to collect all result sheets into one sheet
+results_combined <- rbind(results_pre, results_baseline, results_exercise, results_rec60, results_rec180)
+
+df_long_av_difference_summary %>% 
+    dplyr::mutate(direction = ifelse(mean > 0, "Uptake", "Release")) %>% #Creates a new column for color coding the plot
+    dplyr::mutate(mean = abs(mean)) %>% #Makes all values positive
+    dplyr::mutate(time = factor(time, levels = c("pre", "baseline", "exercise", "rec60", "rec180"))) %>% 
+    dplyr::filter(!mean == 0) %>% 
+    ggplot2::ggplot(aes(x=time, fill=direction))+
+    geom_bar(aes(y = ..count..), stat = "count", position = "dodge")+
+    theme(
+        panel.background = element_blank(),
+        panel.border = element_rect(colour = "black", fill=NA),
+        panel.grid.minor=element_blank(),
+        panel.grid.major = element_blank(),
+        plot.background = element_rect(fill = "white"),
+        axis.line = element_line(colour = "black"),
+        text = element_text(size = 12, family="Source Sans Pro"),
+        axis.title = element_text(size = 12, family="Source Sans Pro"),
+        legend.title = element_blank(),
+        legend.key = element_blank()
+        )+
+    scale_fill_manual(breaks = c("Release", "Uptake"),
+                           values=c("#627282", "#b19f91"))+
+    labs(y="Number of metabolites", x="Time")+
+    ggtitle("All metabolites, release and uptake")
+```

@@ -34,6 +34,9 @@ metadata <- metadata %>%
     dplyr::filter(id != "pool") %>% 
     dplyr::mutate_at(c("id", "time", "site"), factor)
 
+#Reorder samples according to metadata
+df <- df[row.names(metadata)]
+
 #Create summarized experiment
 se <- PhosphoExperiment(assay = list(abundance = df), colData=metadata)
 

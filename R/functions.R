@@ -134,7 +134,7 @@ volcano_all <-function (type, threshold) {
               panel.border = element_rect(colour = "black", fill=NA),
               panel.grid.minor=element_blank(),
               panel.grid.major = element_blank(),
-              plot.background = element_blank(),
+              plot.background = element_rect(color="white"),
               plot.title = element_text(size=12),
               axis.line = element_line(colour = "black"),
               text = element_text(size = 15), #family="Source Sans Pro"),

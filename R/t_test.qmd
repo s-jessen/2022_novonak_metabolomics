@@ -1,0 +1,221 @@
+---
+title: "release"
+format: html
+---
+
+Load in libraries and data
+```{r, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+source("R/functions.R")
+source("R/libraries.R")
+
+load(here::here('data/se.rda'))
+load(here::here('data/metadata.rda'))
+load(here::here('data/df_long.rda'))
+load(here::here('data/df_long_summary.rda'))
+load(here::here('data/df_long_av_difference.rda'))
+load(here::here('data/df_long_av_difference_summary.rda'))
+```
+
+```{r}
+#Multiply raw arterial and venous samples by haematocrit corrected blood flow
+df_long_flow_corrected <- df_long %>% 
+    dplyr::mutate(abundance = 2^abundance) %>% 
+    dplyr::group_by(metabolite, id, time) %>% 
+    dplyr::mutate(av_diff = abundance[site == "a"] - abundance[site == "v"]) %>%
+    dplyr::filter(site == "a") %>% 
+    dplyr::select(-site) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::filter(av_diff != 0) %>% 
+    dplyr::mutate(move = flow*(av_diff * (1-hb))) %>% 
+    dplyr::mutate(move = ifelse(move > 0, log2(move), log2(abs(move))*-1))
+
+```
+
+```{r}
+#Run t-tests
+    results_one_sample_pre <- df_long_flow_corrected %>%
+        dplyr::filter(time == "pre") %>%
+        dplyr::group_by(time, metabolite) %>%
+        t_test(move ~ 1, mu=0, detailed=TRUE) %>% #One sample t-test
+        dplyr::select(metabolite, time, estimate, p) %>%
+        dplyr::rename(logFC=estimate,
+                      P.Value = p)
+
+    #Add extra columns
+    results_one_sample_pre <- results_one_sample_pre %>%
+        dplyr::mutate(xiao=10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>%
+        dplyr::mutate(q = qvalue::qvalue(.$P.Value)$qvalues) %>%
+        dplyr::mutate("-log10p" = -log10(.$P.Value)) %>% #Adds -log10p column for volcano plot
+        dplyr::mutate(regulated = case_when(xiao < 0.05 ~ "+")) %>%   #Adds a column called "regulated" with or without '+' depending on xiao value
+        dplyr::relocate(metabolite, .before=logFC) %>%
+        dplyr::arrange(desc(logFC)) %>%  #Arrange in descending order based on logFC
+        dplyr::mutate(qiao = qvalue::qvalue(.$xiao)$qvalues) %>% 
+        dplyr::mutate(time = "pre")
+    
+writexl::write_xlsx(results_one_sample_pre, here::here('data/t_tests_with_blood_flow/results_one_sample_pre.xlsx'))
+usethis::use_data(results_one_sample_pre, overwrite = TRUE)
+```
+
+```{r}
+#Run t-tests
+    results_one_sample_baseline <- df_long_flow_corrected %>%
+        dplyr::filter(time == "baseline") %>%
+        dplyr::group_by(time, metabolite) %>%
+        t_test(move ~ 1, mu=0, detailed=TRUE) %>% #One sample t-test
+        dplyr::select(metabolite, time, estimate, p) %>%
+        dplyr::rename(logFC=estimate,
+                      P.Value = p)
+
+    #Add extra columns
+    results_one_sample_baseline <- results_one_sample_baseline %>%
+        dplyr::mutate(xiao=10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>%
+        dplyr::mutate(q = qvalue::qvalue(.$P.Value)$qvalues) %>%
+        dplyr::mutate("-log10p" = -log10(.$P.Value)) %>% #Adds -log10p column for volcano plot
+        dplyr::mutate(regulated = case_when(xiao < 0.05 ~ "+")) %>%   #Adds a column called "regulated" with or without '+' depending on xiao value
+        dplyr::relocate(metabolite, .before=logFC) %>%
+        dplyr::arrange(desc(logFC)) %>%  #Arrange in descending order based on logFC
+        dplyr::mutate(qiao = qvalue::qvalue(.$xiao)$qvalues)%>% 
+        dplyr::mutate(time = "baseline")
+    
+writexl::write_xlsx(results_one_sample_baseline, here::here('data/t_tests_with_blood_flow/results_one_sample_baseline.xlsx'))
+usethis::use_data(results_one_sample_baseline, overwrite = TRUE)
+```
+
+```{r}
+#Run t-tests
+    results_one_sample_exercise <- df_long_flow_corrected %>%
+        dplyr::filter(time == "exercise") %>%
+        dplyr::group_by(time, metabolite) %>%
+        t_test(move ~ 1, mu=0, detailed=TRUE) %>% #One sample t-test
+        dplyr::select(metabolite, time, estimate, p) %>%
+        dplyr::rename(logFC=estimate,
+                      P.Value = p)
+
+    #Add extra columns
+    results_one_sample_exercise <- results_one_sample_exercise %>%
+        dplyr::mutate(xiao=10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>%
+        dplyr::mutate(q = qvalue::qvalue(.$P.Value)$qvalues) %>%
+        dplyr::mutate("-log10p" = -log10(.$P.Value)) %>% #Adds -log10p column for volcano plot
+        dplyr::mutate(regulated = case_when(xiao < 0.05 ~ "+")) %>%   #Adds a column called "regulated" with or without '+' depending on xiao value
+        dplyr::relocate(metabolite, .before=logFC) %>%
+        dplyr::arrange(desc(logFC)) %>%  #Arrange in descending order based on logFC
+        dplyr::mutate(qiao = qvalue::qvalue(.$xiao)$qvalues)%>% 
+        dplyr::mutate(time = "exercise")
+    
+writexl::write_xlsx(results_one_sample_exercise, here::here('data/t_tests_with_blood_flow/results_one_sample_exercise.xlsx'))
+usethis::use_data(results_one_sample_exercise, overwrite = TRUE)
+```
+
+```{r}
+#Run t-tests
+    results_one_sample_rec60 <- df_long_flow_corrected %>%
+        dplyr::filter(time == "rec60") %>%
+        dplyr::group_by(time, metabolite) %>%
+        t_test(move ~ 1, mu=0, detailed=TRUE) %>% #One sample t-test
+        dplyr::select(metabolite, time, estimate, p) %>%
+        dplyr::rename(logFC=estimate,
+                      P.Value = p)
+
+    #Add extra columns
+    results_one_sample_rec60 <- results_one_sample_rec60 %>%
+        dplyr::mutate(xiao=10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>%
+        dplyr::mutate(q = qvalue::qvalue(.$P.Value)$qvalues) %>%
+        dplyr::mutate("-log10p" = -log10(.$P.Value)) %>% #Adds -log10p column for volcano plot
+        dplyr::mutate(regulated = case_when(xiao < 0.05 ~ "+")) %>%   #Adds a column called "regulated" with or without '+' depending on xiao value
+        dplyr::relocate(metabolite, .before=logFC) %>%
+        dplyr::arrange(desc(logFC)) %>%  #Arrange in descending order based on logFC
+        dplyr::mutate(qiao = qvalue::qvalue(.$xiao)$qvalues)%>% 
+        dplyr::mutate(time = "rec60")
+    
+writexl::write_xlsx(results_one_sample_rec60, here::here('data/t_tests_with_blood_flow/results_one_sample_rec60.xlsx'))
+usethis::use_data(results_one_sample_rec60, overwrite = TRUE)
+```
+
+```{r}
+#Run t-tests
+    results_one_sample_rec180 <- df_long_flow_corrected %>%
+        dplyr::filter(time == "rec180") %>%
+        dplyr::group_by(time, metabolite) %>%
+        t_test(move ~ 1, mu=0, detailed=TRUE) %>% #One sample t-test
+        dplyr::select(metabolite, time, estimate, p) %>%
+        dplyr::rename(logFC=estimate,
+                      P.Value = p)
+
+    #Add extra columns
+    results_one_sample_rec180 <- results_one_sample_rec180 %>%
+        dplyr::mutate(xiao=10^-(sqrt(log10(1/(P.Value^logFC))^2))) %>%
+        dplyr::mutate(q = qvalue::qvalue(.$P.Value)$qvalues) %>%
+        dplyr::mutate("-log10p" = -log10(.$P.Value)) %>% #Adds -log10p column for volcano plot
+        dplyr::mutate(regulated = case_when(xiao < 0.05 ~ "+")) %>%   #Adds a column called "regulated" with or without '+' depending on xiao value
+        dplyr::relocate(metabolite, .before=logFC) %>%
+        dplyr::arrange(desc(logFC)) %>%  #Arrange in descending order based on logFC
+        dplyr::mutate(qiao = qvalue::qvalue(.$xiao)$qvalues)%>% 
+        dplyr::mutate(time = "rec180")
+    
+writexl::write_xlsx(results_one_sample_rec180, here::here('data/t_tests_with_blood_flow/results_one_sample_rec180.xlsx'))
+usethis::use_data(results_one_sample_rec180, overwrite = TRUE)
+```
+
+Volcanoes
+```{r}
+all_results <- rbind(results_one_sample_pre, results_one_sample_baseline, results_one_sample_exercise, results_one_sample_rec60, results_one_sample_rec180)
+
+all_results%>%
+    mutate(color = case_when(
+        logFC >= 0 & q <= 0.05 ~ "Uptake",
+        logFC <= 0 & q <= 0.05 ~ "Release",
+        TRUE ~ "Unchanged")) %>%
+    ggplot(aes(x=logFC, y=-log10(P.Value), label=metabolite))+
+    geom_point(aes(color = color), size = 3)+
+    theme(panel.background = element_blank(),
+          panel.border = element_rect(colour = "black", fill=NA),
+          panel.grid.minor=element_blank(),
+          panel.grid.major = element_blank(),
+          plot.background = element_rect(color = "white"),
+          plot.title = element_text(size=12),
+          axis.line = element_line(colour = "black"),
+          text = element_text(size = 15), #family="Source Sans Pro"),
+          legend.title = element_blank(),
+          legend.key = element_blank(),
+    )+
+    geom_text_repel(point.size=4, size=2, min.segment.length = Inf, force=0.3)+
+    scale_color_manual(breaks = c("Uptake", "Release", "Unchanged"),
+                       values=c("dodgerblue3", "firebrick3", "gray50"))+
+    xlab("Log2fold change") + ylab("-log10(p)")+
+    facet_grid(~factor(time, levels=c('pre', 'baseline', 'exercise', 'rec60', 'rec180')))
+    
+ggplot2::ggsave(here::here('data/figures/alternative_figures/volcanoes.png'), height=75, width=200, units = "mm")
+
+```
+
+```{r}
+df_long_av_difference_summary %>% 
+    merge(all_results[,c("time", "metabolite", "q")], by=c("time", "metabolite")) %>% #Merge the "regulated" column into results_combined
+    dplyr::filter(q < 0.05) %>% #Filter for only significant metabolites
+    dplyr::mutate(direction = ifelse(mean > 0, "Uptake", "Release")) %>% #Creates a new column for color coding the plot
+    dplyr::mutate(mean = abs(mean)) %>% #Makes all values positive
+    dplyr::mutate(time = factor(time, levels = c("pre", "baseline", "exercise", "rec60", "rec180"))) %>% 
+    dplyr::filter(!mean == 0) %>% 
+    ggplot2::ggplot(aes(x=time, fill=direction))+
+    geom_bar(aes(y = ..count..), stat = "count", position = "dodge")+
+    theme(
+        panel.background = element_blank(),
+        panel.border = element_rect(colour = "black", fill=NA),
+        panel.grid.minor=element_blank(),
+        panel.grid.major = element_blank(),
+        plot.background = element_rect(fill = "white"),
+        axis.line = element_line(colour = "black"),
+        text = element_text(size = 8, family="Source Sans Pro"),
+        axis.title = element_text(size = 8, family="Source Sans Pro"),
+        legend.title = element_blank(),
+        legend.key = element_blank()
+        )+
+    scale_fill_manual(breaks = c("Release", "Uptake"),
+                           values=c("#627282", "#b19f91"))+
+    labs(y="Number of metabolites", x="Time")+
+    ggtitle("Number of significant metabolites, release and uptake")
+
+ggplot2::ggsave(here::here('data/figures/alternative_figures/number_of_release_uptake.png'), height=100, width=200, units = "mm")
+```
+

@@ -23,7 +23,8 @@ Volcano for all time points
 ```{r}
 volcano_all(xiao, 0.05)
 
-ggplot2::ggsave(here::here('data/figures/volcanoes/volcanoes_all.pdf'), height=50, width=180, units = "mm")
+#ggplot2::ggsave(here::here('data/figures/volcanoes/volcanoes_all.pdf'), height=50, width=180, units = "mm")
+ggplot2::ggsave(here::here('data/figures/limma/volcanoes/volcanoes_limma.png'), height=75, width=200, units = "mm")
 
 ```
 
@@ -168,7 +169,7 @@ df_long_av_difference_summary %>%
     labs(y="Number of metabolites", x="Time")+
     ggtitle("Number of significant metabolites, release and uptake")
 
-ggplot2::ggsave(here::here('data/figures/number_of_release_uptake.png'), height=100, width=200, units = "mm")
+ggplot2::ggsave(here::here('data/figures/limma/number_of_release_uptake.png'), height=100, width=200, units = "mm")
 
 ```
 
