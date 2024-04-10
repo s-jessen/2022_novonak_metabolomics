@@ -8,71 +8,155 @@ Load in libraries and data
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
 source("R/functions.R")
 source("R/libraries.R")
-source("R/limma_results.R")
+source("R/t_test_results.R")
 
 load(here::here('data/se.rda'))
-load(here::here('data/metadata.rda'))
 load(here::here('data/df_long.rda'))
 load(here::here('data/df_long_summary.rda'))
-load(here::here('data/df_long_av_difference.rda'))
-load(here::here('data/df_long_av_difference_summary.rda'))
+load(here::here('data/df_long_flow_corrected.rda'))
+load(here::here('data/df_wide_flow_corrected.rda'))
+
+metadata <- read_excel(here::here('data-raw/design_raw.xlsx')) %>% 
+    tibble::column_to_rownames("sample") %>% 
+    dplyr::mutate_at(c("id", "time", "site"), factor) %>% 
+    dplyr::filter(site == "a") %>% 
+    dplyr::filter(id != "pool")
 ```
 
-Time course data of specified peptide
-```{r}
-time_course_single(df_long_av_difference, "GEGDFLAEGGGV")
-```
 
-
-Heatmap (log2 values)
+Heatmap (flow corrected log2 values)
 ```{r}
-df_heatmap <- SummarizedExperiment::assay(se)
+cluster_number = 4
+
+#Prepare dataframe
+df_heatmap <- df_wide_flow_corrected
+
+#Prepare colors
+ano_colors = list(time = c(pre = "#003f5c", baseline = "#58508d", exercise = "#bc5090", rec60 = "#ff6361", rec180 = "#ffa600"))
+                   #id = c("1" = "#81d5ca", "2" = "#f0f0c6", "3" = "#fcd095", "6" = "#de83a2", "7" = "#8065ab", "8" = "#8c94d2"))
+
+#Prepare column order
+order <- metadata %>% 
+    tibble::rownames_to_column("sample") %>% 
+    dplyr::mutate(time = factor(time, levels = c("pre", "baseline", "exercise", "rec60", "rec180"))) %>% 
+    dplyr::arrange(time) %>% 
+    dplyr::pull(sample)
+
+#Rearrange columns
+df_heatmap <- df_heatmap[,order]
 
 #Heatmap
 heatmap <- pheatmap(df_heatmap,
     scale = "row",
     cluster_rows = T,
-    cluster_cols = T,
-    annotation_col = dplyr::select(metadata, c("time", "id")),
-    #annotation_colors=list(time="#C06C84"),
+    cluster_cols = F,
+    annotation_col = dplyr::select(metadata, c("time")),
+    annotation_colors = ano_colors,
     clustering_distance_cols="correlation",
     clustering_distance_rows = "correlation",
     clustering_method = "ward.D2",
     show_rownames = F,
-    color=colorRampPalette(c("navy", "white", "red"))(50),
+    show_colnames = F,
+    color=colorRampPalette(c("#3173b2", "white", "#d3352f"))(200),
     #cellwidth =10,
-    #cellheight = 10,
-    border_color = "white"
+    #cellheight = 3,
+    border_color = "white",
+    cutree_rows = cluster_number,
+    treeheight_row = 15,
+    treeheight_col = 15
     )
 
-#ggplot2::ggsave(here::here('data/figures/heatmap.pdf'), plot=heatmap)
+#Create new heatmap with cluster annotation
+row_clusters <- cutree(heatmap$tree_row, k = cluster_number)
+annotation_row_df <- data.frame(cluster = as.factor(row_clusters))
+ano_colors2 = list(time = c(pre = "#003f5c", baseline = "#58508d", exercise = "#bc5090", rec60 = "#ff6361", rec180 = "#ffa600"),
+                   cluster = c("1" = "#81d5ca", "2" = "#f0f0c6", "3" = "#fcd095", "4" = "#de83a2", "5" = "#ff6361", "6" = "#8c94d2", "7" = "green", "8" = "red"))
 
-```
-
-Heatmap (av_difference)
-```{r}
-df_heatmap <- df_long_av_difference %>% 
-    dplyr::select(c("sample", "peptide", "av_difference")) %>% 
-    pivot_wider(names_from = sample, values_from = av_difference) %>% 
-    column_to_rownames("peptide")
-
-#Heatmap
 heatmap <- pheatmap(df_heatmap,
     scale = "row",
     cluster_rows = T,
-    cluster_cols = T,
-    annotation_col = dplyr::select(metadata, c("time", "id")),
-    #annotation_colors=list(time="#C06C84"),
+    cluster_cols = F,
+    annotation_col = dplyr::select(metadata, c("time")),
+    annotation_colors = ano_colors2,
     clustering_distance_cols="correlation",
     clustering_distance_rows = "correlation",
     clustering_method = "ward.D2",
     show_rownames = F,
-    color=colorRampPalette(c("navy", "white", "red"))(50),
+    show_colnames = F,
+    color=colorRampPalette(c("#3173b2", "white", "#d3352f"))(200),
     #cellwidth =10,
-    #cellheight = 10,
-    border_color = "white"
+    #cellheight = 3,
+    border_color = "white",
+    cutree_rows = cluster_number,
+    treeheight_row = 15,
+    treeheight_col = 15,
+    annotation_row = annotation_row_df
     )
 
-#ggplot2::ggsave(here::here('data/figures/heatmap.pdf'), plot=heatmap)
+#Save
+ggplot2::ggsave(here::here(paste0('data/figures/heatmaps/w_flow/all_', cluster_number, '.svg')), plot=heatmap, height = 200, width = 150, units = "mm")
+
+#Extract clusters
+clusters <- cbind(df_heatmap, cutree(heatmap$tree_row, k = cluster_number)) %>% 
+    dplyr::rename(cluster = ncol(.)) #Renames last column to "cluster"
+
+#Convert to long dataframe for plotting
+clusters_long <- clusters %>% 
+    rownames_to_column("metabolite") %>% 
+    melt(id.vars =c("metabolite", "cluster")) %>% 
+    dplyr::rename(sample = variable,
+           move = value) %>% 
+    merge((metadata %>% rownames_to_column("sample")), by="sample") %>%
+    dplyr::relocate(metabolite, 1) %>% 
+    dplyr::relocate(move, .after=id) %>% 
+    dplyr::select(-c("time_num", "flow", "hb", "site"))
+
+#Convert time as factor for easier plotting
+clusters_long$time <- factor(clusters_long$time, levels = c("pre", "baseline", "exercise", "rec60", "rec180"))
+
+#Plot
+ggplot(clusters_long, aes(x = time, y = move))+
+    stat_summary(aes(y = move, group = metabolite), fun = "mean", geom = "line", size = 0.1, na.rm = TRUE, show.legend = FALSE, alpha = 0.4, color = "gray")+
+    stat_summary(aes(y = move, group = cluster), fun = "mean", geom = "line", size = 1, na.rm = TRUE, show.legend = FALSE, alpha = 1, color = "red")+
+    geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.1)+
+    theme(
+        panel.background = element_blank(),
+        panel.border = element_rect(colour = "black", fill=NA, linewidth = 0.1),
+        panel.grid.minor=element_blank(),
+        panel.grid.major = element_blank(),
+        plot.background = element_rect(fill = "white"),
+        axis.line = element_blank(),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        axis.ticks = element_line(linewidth = 0.1),
+        axis.title = element_text(size = 6, family="Source Sans Pro"),
+        axis.title.x = element_text(size = 6, family="Source Sans Pro"),
+        axis.title.y = element_text(size = 6, family="Source Sans Pro"),
+        text = element_text(size = 8, family="Source Sans Pro"),
+        legend.title = element_blank(),
+        legend.key = element_blank(),
+        strip.background = element_blank()
+    )+
+    scale_x_discrete(labels = c(pre = "Pre", baseline = "Baseline", exercise = "Exercise", rec60 = "Rec60", rec180 = "Rec180"))+
+    labs(y = "Release/Uptake", x = "Time")+
+    facet_grid(~cluster,
+               labeller = as_labeller(c(
+                   "1"="Cluster 1",
+                   "2"="Cluster 2",
+                   "3"="Cluster 3",
+                   "4"="Cluster 4",
+                   "5"="Cluster 5",
+                   "6"="Cluster 6")))
+
+#Save
+ggplot2::ggsave(here::here(paste0('data/figures/heatmaps/w_flow/clusters_', cluster_number, '.svg')), height = 50, width = 120, units = "mm")
 
 ```
+
+Optimal number of clusters:
+```{r}
+library(factoextra)
+
+# Use the 'fviz_nbclust' function to compute and visualize the within-group variance
+fviz_nbclust(df_heatmap, hcut, method = "wss") 
+```
+

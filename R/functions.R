@@ -121,7 +121,7 @@ volcano <- function (dataset, type, threshold) {
 
 volcano_all <-function (type, threshold) {
 
-    all_results <- rbind(results_pre, results_baseline, results_exercise, results_rec60, results_rec180)
+    all_results <- rbind(results_one_sample_pre, results_one_sample_baseline, results_one_sample_exercise, results_one_sample_rec60, results_one_sample_rec180)
 
     all_results%>%
         mutate(color = case_when(
@@ -129,23 +129,28 @@ volcano_all <-function (type, threshold) {
             logFC <= 0 & {{type}} <= {{threshold}} ~ "Release",
             TRUE ~ "Unchanged")) %>%
         ggplot(aes(x=logFC, y=-log10(P.Value), label=metabolite))+
-        geom_point(aes(color = color), size = 3)+
+        geom_point(aes(color = color), size = 1)+
         theme(panel.background = element_blank(),
-              panel.border = element_rect(colour = "black", fill=NA),
+              panel.border = element_rect(colour = "black", fill=NA, linewidth = 0.1),
               panel.grid.minor=element_blank(),
               panel.grid.major = element_blank(),
-              plot.background = element_rect(color="white"),
-              plot.title = element_text(size=12),
-              axis.line = element_line(colour = "black"),
-              text = element_text(size = 15), #family="Source Sans Pro"),
+              plot.background = element_rect(color = "white"),
+              plot.title = element_text(size=10),
+              axis.line = element_blank(),
+              axis.text = element_text(color = "black"),
+              axis.ticks = element_line(linewidth = 0.1),
+              strip.background = element_blank(),
+              text = element_text(size = 8, family="Source Sans Pro"),
               legend.title = element_blank(),
               legend.key = element_blank(),
+              legend.position = "none"
         )+
-        geom_text_repel(point.size=4, size=3, min.segment.length = Inf, force=0.3)+
+        geom_text_repel(point.size=1, size=1, min.segment.length = Inf, force=0.3)+
         scale_color_manual(breaks = c("Uptake", "Release", "Unchanged"),
                            values=c("dodgerblue3", "firebrick3", "gray50"))+
         xlab("Log2fold change") + ylab("-log10(p)")+
-        facet_grid(~factor(time, levels=c('pre', 'baseline', 'exercise', 'rec60', 'rec180')))
+        facet_grid(~factor(time, levels=c('pre', 'baseline', 'exercise', 'rec60', 'rec180'),
+                           labels = c("Pre", "Baseline", "Exercise", "Rec60", "Rec180")))
 
 }
 

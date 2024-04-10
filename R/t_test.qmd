@@ -30,6 +30,7 @@ df_long_flow_corrected <- df_long %>%
     dplyr::mutate(move = flow*(av_diff * (1-hb))) %>% 
     dplyr::mutate(move = ifelse(move > 0, log2(move), log2(abs(move))*-1))
 
+usethis::use_data(df_long_flow_corrected, overwrite = TRUE)
 ```
 
 ```{r}
@@ -219,3 +220,13 @@ df_long_av_difference_summary %>%
 ggplot2::ggsave(here::here('data/figures/alternative_figures/number_of_release_uptake.png'), height=100, width=200, units = "mm")
 ```
 
+Create SE like data frame of df_long_flow_corrected
+```{r}
+df_wide_flow_corrected <- df_long_flow_corrected %>% 
+    dplyr::select(c("sample", "metabolite", "move")) %>% 
+    pivot_wider(names_from = sample, values_from = move) %>% 
+    column_to_rownames("metabolite")
+
+usethis::use_data(df_wide_flow_corrected, overwrite = TRUE)
+    
+```

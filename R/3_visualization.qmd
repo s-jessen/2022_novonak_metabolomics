@@ -9,22 +9,15 @@ knitr::opts_chunk$set(message = FALSE, warning = FALSE)
 
 source("R/functions.R")
 source("R/libraries.R")
-source("R/limma_results.R")
+source("R/t_test_results.R")
 
-load(here::here('data/se.rda'))
-load(here::here('data/metadata.rda'))
-load(here::here('data/df_long.rda'))
-load(here::here('data/df_long_summary.rda'))
-load(here::here('data/df_long_av_difference.rda'))
-load(here::here('data/df_long_av_difference_summary.rda'))
 ```
 
 Volcano for all time points
 ```{r}
-volcano_all(xiao, 0.05)
+volcano_all(q, 0.05)
 
-#ggplot2::ggsave(here::here('data/figures/volcanoes/volcanoes_all.pdf'), height=50, width=180, units = "mm")
-ggplot2::ggsave(here::here('data/figures/limma/volcanoes/volcanoes_limma.png'), height=75, width=200, units = "mm")
+ggplot2::ggsave(here::here('data/figures/volcanoes/w_flow/all.svg'), height=50, width=200, units = "mm")
 
 ```
 
@@ -35,9 +28,9 @@ euler_uptake_obj <-
         list(
             #Pre = dplyr::filter(results_pre, xiao <0.05 & logFC < 0)$metabolite,
             #Baseline = dplyr::filter(results_baseline, xiao <0.05 & logFC < 0)$metabolite,
-            Exercise = dplyr::filter(results_exercise, xiao <0.05 & logFC > 0)$metabolite,
-            Rec60 = dplyr::filter(results_rec60, xiao <0.05 & logFC > 0)$metabolite,
-            Rec180 = dplyr::filter(results_rec180, xiao <0.05 & logFC > 0)$metabolite 
+            Exercise = dplyr::filter(results_one_sample_exercise, q <0.05 & logFC > 0)$metabolite,
+            Rec60 = dplyr::filter(results_one_sample_rec60, q <0.05 & logFC > 0)$metabolite,
+            Rec180 = dplyr::filter(results_one_sample_rec180, q <0.05 & logFC > 0)$metabolite 
         ), 
         shape = "ellipse") 
     
@@ -53,15 +46,19 @@ euler_uptake_plot
 eulerr::error_plot(euler_uptake_obj)
 euler_uptake_obj
 
-ggplot2::ggsave(here::here('data/figures/euler/uptake.pdf'), height=150, width=150, units = "mm", plot = euler_uptake_plot)
+ggplot2::ggsave(here::here('data/figures/euler/w_flow/uptake.svg'), height=150, width=150, units = "mm", plot = euler_uptake_plot)
 
 ```
 
 List of uptaken metabolites shared among exercise and recovery
 ```{r}
 
-Reduce(intersect, list(dplyr::filter(results_rec60, xiao <0.05 & logFC > 0)$metabolite, 
-                       dplyr::filter(results_rec180, xiao <0.05 & logFC > 0)$metabolite))
+Reduce(intersect, list(dplyr::filter(results_one_sample_rec60, q <0.05 & logFC > 0)$metabolite, 
+                       dplyr::filter(results_one_sample_rec180, q <0.05 & logFC > 0)$metabolite,
+                       dplyr::filter(results_one_sample_exercise, q <0.05 & logFC > 0)$metabolite))
+
+Reduce(intersect, list(dplyr::filter(results_one_sample_rec60, q <0.05 & logFC > 0)$metabolite,
+                       dplyr::filter(results_one_sample_exercise, q <0.05 & logFC > 0)$metabolite))
 
 ```
 
@@ -72,9 +69,9 @@ euler_release_obj <-
         list(
             #Pre = dplyr::filter(results_pre, xiao <0.05 & logFC < 0)$metabolite,
             #Baseline = dplyr::filter(results_baseline, xiao <0.05 & logFC < 0)$metabolite,
-            Exercise = dplyr::filter(results_exercise, xiao <0.05 & logFC < 0)$metabolite,
-            Rec60 = dplyr::filter(results_rec60, xiao <0.05 & logFC < 0)$metabolite,
-            Rec180 = dplyr::filter(results_rec180, xiao <0.05 & logFC < 0)$metabolite  
+            Exercise = dplyr::filter(results_one_sample_exercise, q <0.05 & logFC < 0)$metabolite,
+            Rec60 = dplyr::filter(results_one_sample_rec60, q <0.05 & logFC < 0)$metabolite,
+            Rec180 = dplyr::filter(results_one_sample_rec180, q <0.05 & logFC < 0)$metabolite  
         ), 
         shape = "ellipse") 
     
@@ -90,22 +87,27 @@ euler_release_plot
 eulerr::error_plot(euler_release_obj)
 euler_release_obj
 
-ggplot2::ggsave(here::here('data/figures/euler/uptake.pdf'), height=150, width=150, units = "mm", plot = euler_release_plot)
+ggplot2::ggsave(here::here('data/figures/euler/w_flow/release.svg'), height=150, width=150, units = "mm", plot = euler_release_plot)
 ```
 
 List of released metabolites shared among exercise and recovery
 ```{r}
 #Exercise and rec60
-Reduce(intersect, list(dplyr::filter(results_exercise, xiao <0.05 & logFC < 0)$metabolite,
-                       dplyr::filter(results_rec60, xiao <0.05 & logFC < 0)$metabolite))
+Reduce(intersect, list(dplyr::filter(results_one_sample_exercise, q <0.05 & logFC < 0)$metabolite,
+                       dplyr::filter(results_one_sample_rec60, q <0.05 & logFC < 0)$metabolite))
 
 #Exercise and rec180
-Reduce(intersect, list(dplyr::filter(results_exercise, xiao <0.05 & logFC < 0)$metabolite,
-                       dplyr::filter(results_rec180, xiao <0.05 & logFC < 0)$metabolite))
+Reduce(intersect, list(dplyr::filter(results_one_sample_exercise, q <0.05 & logFC < 0)$metabolite))
+                       dplyr::filter(results_one_sample_rec180, q <0.05 & logFC < 0)$metabolite))
 
 #Rec60 and rec180
-Reduce(intersect, list(dplyr::filter(results_rec60, xiao <0.05 & logFC < 0)$metabolite,
-                       dplyr::filter(results_rec180, xiao <0.05 & logFC < 0)$metabolite))
+Reduce(intersect, list(dplyr::filter(results_one_sample_rec60, q <0.05 & logFC < 0)$metabolite,
+                       dplyr::filter(results_one_sample_rec180, q <0.05 & logFC < 0)$metabolite))
+
+#Ex, Rec60 and rec180
+Reduce(intersect, list(dplyr::filter(results_one_sample_rec60, q <0.05 & logFC < 0)$metabolite,
+                       dplyr::filter(results_one_sample_exercise, q <0.05 & logFC < 0)$metabolite,
+                       dplyr::filter(results_one_sample_rec180, q <0.05 & logFC < 0)$metabolite))
 
 ```
 
@@ -141,11 +143,11 @@ df_long_av_difference_summary %>%
 Uptake and release figure (only significant) 
 ```{r}
 #Need to collect all result sheets into one sheet
-results_combined <- rbind(results_baseline, results_exercise, results_rec60, results_rec180)
+results_combined <- rbind(results_one_sample_pre, results_one_sample_baseline, results_one_sample_exercise, results_one_sample_rec60, results_one_sample_rec180)
 
 df_long_av_difference_summary %>% 
-    merge(results_combined[,c("time", "metabolite", "regulated_xiao")], by=c("time", "metabolite")) %>% #Merge the "regulated" column into results_combined
-    dplyr::filter(regulated_xiao == "+") %>% #Filter for only significant metabolites
+    merge(results_combined[,c("time", "metabolite", "regulated")], by=c("time", "metabolite")) %>% #Merge the "regulated" column into results_combined
+    dplyr::filter(regulated == "+") %>% #Filter for only significant metabolites
     dplyr::mutate(direction = ifelse(mean > 0, "Uptake", "Release")) %>% #Creates a new column for color coding the plot
     dplyr::mutate(mean = abs(mean)) %>% #Makes all values positive
     dplyr::mutate(time = factor(time, levels = c("pre", "baseline", "exercise", "rec60", "rec180"))) %>% 
@@ -154,22 +156,27 @@ df_long_av_difference_summary %>%
     geom_bar(aes(y = ..count..), stat = "count", position = "dodge")+
     theme(
         panel.background = element_blank(),
-        panel.border = element_rect(colour = "black", fill=NA),
+        panel.border = element_rect(colour = "black", fill=NA, linewidth = 0.1),
         panel.grid.minor=element_blank(),
         panel.grid.major = element_blank(),
         plot.background = element_rect(fill = "white"),
-        axis.line = element_line(colour = "black"),
+        axis.line = element_blank(),
+        axis.ticks = element_line(linewidth = 0.1),
         text = element_text(size = 8, family="Source Sans Pro"),
-        axis.title = element_text(size = 8, family="Source Sans Pro"),
+        axis.title = element_text(size = 6, family="Source Sans Pro"),
+        axis.title.x = element_text(size = 6, family="Source Sans Pro"),
+        axis.title.y = element_text(size = 6, family="Source Sans Pro"),
         legend.title = element_blank(),
         legend.key = element_blank()
         )+
+    scale_x_discrete(labels=c("pre"="Pre", "baseline"="Baseline", 
+                          "exercise"="Exercise", "rec60"="Rec60", 
+                          "rec180"="Rec180"))+
     scale_fill_manual(breaks = c("Release", "Uptake"),
                            values=c("#627282", "#b19f91"))+
-    labs(y="Number of metabolites", x="Time")+
-    ggtitle("Number of significant metabolites, release and uptake")
+    labs(y="Number of regulated metabolites", x="Time")
 
-ggplot2::ggsave(here::here('data/figures/limma/number_of_release_uptake.png'), height=100, width=200, units = "mm")
+ggplot2::ggsave(here::here('data/figures/number/w_flow/number_of_release_uptake.svg'), height=50, width=100, units = "mm")
 
 ```
 
