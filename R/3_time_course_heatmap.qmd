@@ -160,3 +160,32 @@ library(factoextra)
 fviz_nbclust(df_heatmap, hcut, method = "wss") 
 ```
 
+Visualize glutamate acid
+```{r}
+df_long_flow_corrected %>% 
+    dplyr::filter(metabolite == "Glutamate Acid") %>% 
+    ggplot(aes(x = time, y = move))+
+        stat_summary(aes(y = move, group = id), fun = "mean", geom = "line", size = 0.1, na.rm = TRUE, show.legend = FALSE, alpha = 0.4, color = "gray")+
+        stat_summary(aes(y = move, group = metabolite), fun = "mean", geom = "line", size = 1, na.rm = TRUE, show.legend = FALSE, alpha = 1, color = "red")+
+        geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.1)+
+        theme(
+            panel.background = element_blank(),
+            panel.border = element_rect(colour = "black", fill=NA, linewidth = 0.1),
+            panel.grid.minor=element_blank(),
+            panel.grid.major = element_blank(),
+            plot.background = element_rect(fill = "white"),
+            axis.line = element_blank(),
+            axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+            axis.ticks = element_line(linewidth = 0.1),
+            axis.title = element_text(size = 6, family="Source Sans Pro"),
+            axis.title.x = element_text(size = 6, family="Source Sans Pro"),
+            axis.title.y = element_text(size = 6, family="Source Sans Pro"),
+            text = element_text(size = 8, family="Source Sans Pro"),
+            legend.title = element_blank(),
+            legend.key = element_blank(),
+            strip.background = element_blank()
+        )+
+        scale_x_discrete(labels = c(pre = "Pre", baseline = "Baseline", exercise = "Exercise", rec60 = "Rec60", rec180 = "Rec180"))+
+        labs(y = "Release/Uptake", x = "Time")
+```
+
